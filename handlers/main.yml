@@ -1,0 +1,12 @@
+---
+# handlers file for moodle
+
+- name: Nginx restart
+  service: name=nginx state=restarted
+
+- name: MariaDB restart
+  service: name=mariadb state=restarted
+
+- name: PHP-FPM restart
+  service: name=php-fpm state=restarted
+

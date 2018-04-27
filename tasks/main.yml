@@ -1,0 +1,59 @@
+---
+# tasks file for moodle
+
+- name: Setup hostname
+  hostname:
+    name: "{{ domain_name }}"
+
+- include_tasks: "{{ ansible_os_family }}.yml"
+
+- name: Create www_path
+  file:
+    path: "{{ www_path }}"
+    state: directory
+    owner: "{{ www_user }}"
+    group: "{{ www_group }}"
+
+- name: Check moodle
+  stat: path={{ www_path }}/moodle/
+  register: moodle_home
+
+- name: Download moodle
+  unarchive:
+    src={{ moodle_download_url}}
+    dest={{ www_path }}
+    copy=no
+    owner=nginx
+    group=nginx
+  when: moodle_home.stat.exists==False
+
+- name: Copy Nginx conf
+  template:
+    src: "nginx/moodle.conf.j2"
+    dest: "/etc/nginx/conf.d/moodle.conf"
+  notify: Nginx restart
+
+- name: Create DB
+  mysql_db: name={{ mysql_db }} state=present
+
+- name: Create DB user
+  mysql_user:
+    name: "{{ mysql_user}}"
+    password: "{{ mysql_pass}}"
+    priv: "{{ mysql_db }}.*:ALL"
+    state: present
+
+- name: Create moodledata dir
+  file:
+    path: "{{ moodledata_path }}"
+    state: directory
+    owner: "nginx"
+    group: "nginx"
+
+- name: Enable maintenance cron
+  cron:
+    name: Moodle cron
+    minute: "*"
+    hour: "*"
+    job: "php /home/www/moodle/admin/cli/cron.php"
+
